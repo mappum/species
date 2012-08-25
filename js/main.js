@@ -15,12 +15,16 @@ var resources = [{
     type: "image",
     src: "img/tiles.png"
 }, {
+    name: "bullet",
+    type: "image",
+    src: "img/bullet.png"
+}, {
     name: "level1",
     type: "tmx",
     src: "data/level1.tmx"
 }];
 
-me.debug.renderHitBox = true;
+//me.debug.renderHitBox = true;
  
 var game = {
     onload: function() {
@@ -38,31 +42,16 @@ var game = {
         me.state.set(me.state.PLAY, new GameScreen());
 
         me.entityPool.add('PlayerEntity', PlayerEntity);
+        me.entityPool.add('ProjectileEntity', ProjectileEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
         me.input.bindKey(me.input.KEY.W, 'jump');
         me.input.bindKey(me.input.KEY.SPACE, 'jump');
-        me.input.bindKey(me.input.KEY.X, 'shoot');
+        me.input.bindKey(me.input.KEY.X, 'shoot', true);
 
         try { me.input.registerMouseEvent(); } catch(e) {}
         me.input.bindMouse(me.input.mouse.LEFT, me.input.KEY.X);
-
-
-        window.addEventListener('mousemove', function(e) {
-            var offset = me.video.getPos();
-
-            var x = e.pageX - offset.x;
-            var y = e.pageY - offset.y;
-
-            if(me.sys.scale !== 1) {
-                x /= me.sys.scale;
-                y /= me.sys.scale;
-            }
-
-            me.input.mouse.pos.x = x;
-            me.input.mouse.pos.y = y;
-        }, false);
 
         me.state.change(me.state.PLAY);
     }
@@ -100,14 +89,23 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         if(me.input.isKeyPressed('jump')) this.doJump();
 
-        if(me.input.isKeyPressed('shoot')) console.log('shoot')
-
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
 
         var dx = me.input.mouse.pos.x - x,
             dy = me.input.mouse.pos.y - y;
         this.aimAngle = Math.atan2(dy, dx);
+
+        if(me.input.isKeyPressed('shoot')) {
+            me.game.add(new ProjectileEntity(this.pos.x, this.pos.y, {
+                x: this.pos.x,
+                y: this.pos.y,
+                angle: this.aimAngle,
+                power: 12,
+                name: 'ProjectileEntity'
+            }), 5);
+            me.game.sort();
+        }
 
         this.updateMovement();
 
@@ -138,6 +136,43 @@ var PlayerEntity = me.ObjectEntity.extend({
         if(this.vel.x !== 0) {
             this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
         }
+    }
+});
+
+var ProjectileEntity = me.ObjectEntity.extend({
+    init: function(x, y, settings) {
+        settings.image = settings.image || 'bullet';
+        this.parent(x, y, settings);
+
+        this.collidable = true;
+        this.gravity = 0;
+
+        this.setFriction(0, 0);
+
+        this.power = settings.power || 12;
+        this.angle = settings.angle || 0;
+
+        var velX = this.power * Math.cos(this.angle),
+            velY = this.power * Math.sin(this.angle);
+        this.vel = new me.Vector2d(velX, velY);
+        this.startVel = new me.Vector2d(velX, velY);
+    },
+
+    update: function() {
+        this.updateMovement();
+
+        me.game.collide(this);
+        if(this.vel.x !== this.startVel.x || this.vel.y !== this.startVel.y) this.onWorldCollision();
+
+        return true;
+    },
+
+    onCollision: function(res, obj) {
+        this.collidable = false;
+    },
+
+    onWorldCollision: function() {
+        me.game.remove(this);
     }
 });
 
