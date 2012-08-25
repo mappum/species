@@ -117,9 +117,9 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.shootCooldown = 500;
 
         this.lightWidth = 40 * Math.PI / 180;
-        this.rayWidth = 1 * Math.PI / 180;
+        this.rayWidth = 0.25 * Math.PI / 180;
         this.rayLength = 1000;
-        this.rayPrecision = 4;
+        this.rayPrecision = 2;
 
         this.updateColRect(0, this.width, 0, this.height);
 
@@ -176,8 +176,8 @@ var PlayerEntity = me.ObjectEntity.extend({
 
             var sinI = Math.sin(i),
                 cosI = Math.cos(i),
-                sinIr = Math.sin(i + this.rayWidth),
-                cosIr = Math.cos(i + this.rayWidth);
+                sinIr = Math.sin(i + this.rayWidth + 0.05),
+                cosIr = Math.cos(i + this.rayWidth + 0.05);
 
             for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
                 leftX = j * sinI;
@@ -185,16 +185,14 @@ var PlayerEntity = me.ObjectEntity.extend({
                 rightX = j * sinIr;
                 rightY = j * cosIr;
 
+                var tileX, tileY;
+                
                 try {
-                    var tileX = Math.floor((leftX + this.pos.x + 4) / 32),
-                        tileY = Math.floor((leftY + this.pos.y + 24) / 32);
+                    tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x + 4) / 32);
+                    tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y + 24) / 32);
 
-                    if(me.game.collisionMap.layerData[tileX][tileY] !== null) {
-                        break;
-                    }
-                } catch(e) {
-                    break;
-                }
+                    if(me.game.collisionMap.layerData[tileX][tileY] !== null) break;
+                } catch(e) { break; }
             }
 
             ctx.beginPath();
