@@ -116,10 +116,10 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.lastShoot = 0;
         this.shootCooldown = 500;
 
-        this.lightWidth = 40 * Math.PI / 180;
-        this.rayWidth = 0.25 * Math.PI / 180;
+        this.lightWidth = 50 * Math.PI / 180;
+        this.rayWidth = 0.3 * Math.PI / 180;
         this.rayLength = 1000;
-        this.rayPrecision = 2;
+        this.rayPrecision = 3;
 
         this.updateColRect(0, this.width, 0, this.height);
 
