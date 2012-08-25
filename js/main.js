@@ -185,13 +185,12 @@ var PlayerEntity = me.ObjectEntity.extend({
                 rightX = j * sinIr;
                 rightY = j * cosIr;
 
-                var tileX, tileY;
-                
                 try {
-                    tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x + 4) / 32);
-                    tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y + 24) / 32);
+                    var tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x + 4) / 32),
+                        tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y + 24) / 32);
 
-                    if(me.game.collisionMap.layerData[tileX][tileY] !== null) break;
+                    var tile = me.game.collisionMap.layerData[tileX][tileY];
+                    if(tile && tile.tileId === 1) break;
                 } catch(e) { break; }
             }
 
