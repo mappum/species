@@ -3,14 +3,6 @@ var resources = [{
     type: "image",
     src: "img/null.png"
 }, {
-    name: "mountains",
-    type: "image",
-    src: "img/mountains.png"
-}, {
-    name: "sky",
-    type: "image",
-    src: "img/sky.png"
-}, {
     name: "tiles",
     type: "image",
     src: "img/tiles.png"
