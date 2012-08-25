@@ -91,7 +91,14 @@ var GameScreen = me.ScreenObject.extend({
     onResetEvent: function() {
         me.levelDirector.loadLevel('level1');
 
-        me.game.lighting = me.video.createCanvasSurface(640, 480);
+        me.game.lighting = {
+            ctx: me.video.createCanvasSurface(640, 480),
+            shadow: new ShadowEntity(),
+            enabled: false
+        };
+
+        me.game.add(me.game.lighting.shadow, 10);
+        me.game.sort();
     },
 
     onDestroyEvent: function() {
@@ -110,20 +117,20 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.collidable = true;
 
-        this.setVelocity(4, 12);
+        this.setVelocity(3, 12);
         this.accel = new me.Vector2d(0.7, 10);
 
-        this.animationspeed = me.sys.fps / 16;
+        this.animationspeed = me.sys.fps / 13;
 
         this.updateColRect(0, this.width, 0, this.height);
 
-        this.lightEntity = new LightEntity(x, y, {
+        this.light = new LightEntity(x, y, {
             x: x,
             y: y,
             angle: 0,
             width: 65
         });
-        me.game.add(this.lightEntity, this.z);
+        me.game.add(this.light, this.z);
         me.game.sort();
 
         me.game.viewport.follow(this.pos, me.game.viewport.AXIS.BOTH);
@@ -139,13 +146,17 @@ var PlayerEntity = me.ObjectEntity.extend({
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
 
-        var dx = me.input.mouse.pos.x - x,
-            dy = me.input.mouse.pos.y - y;
-        this.aimAngle = Math.atan2(dy, dx) - Math.PI / 2;
+        if(this.light.enabled) {
+            var dx = me.input.mouse.pos.x - x,
+                dy = me.input.mouse.pos.y - y;
+            this.aimAngle = Math.atan2(dy, dx) - Math.PI / 2;
 
-        this.lightEntity.angle = this.aimAngle;
-        this.lightEntity.pos.x = this.pos.x + 4 - 18 * Math.sin(this.aimAngle);
-        this.lightEntity.pos.y = this.pos.y + 24 + 18 * Math.cos(this.aimAngle);
+            this.light.angle = this.aimAngle;
+            this.light.pos.x = this.pos.x + 4 - 18 * Math.sin(this.aimAngle);
+            this.light.pos.y = this.pos.y + 24 + 18 * Math.cos(this.aimAngle);
+        } else {
+            this.aimAngle = 0;
+        }
 
         this.updateMovement();
 
@@ -228,6 +239,8 @@ var LightEntity = me.ObjectEntity.extend({
 
         this.parent(x, y, settings);
 
+        this.enabled = settings.enabled || true;
+
         this.angle = (settings.angle || 0) * Math.PI / 180;
         this.width = (settings.width || 45) * Math.PI / 180;
 
@@ -241,57 +254,59 @@ var LightEntity = me.ObjectEntity.extend({
     },
 
     draw: function(ctx) {
-        ctx = me.game.lighting;
+        if(this.enabled && me.game.lighting.enabled) {
+            ctx = me.game.lighting.ctx;
 
-        var x = ~~(this.pos.x - this.vp.pos.x),
-            y = ~~(this.pos.y - this.vp.pos.y);
+            var x = ~~(this.pos.x - this.vp.pos.x),
+                y = ~~(this.pos.y - this.vp.pos.y);
 
-        var rayStart = (-this.width / 2) - this.angle;
-        var rayEnd = (this.width / 2) - this.angle;
+            var rayStart = (-this.width / 2) - this.angle;
+            var rayEnd = (this.width / 2) - this.angle;
 
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
 
-        for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
-            var leftX, leftY,
-                rightX, rightY;
+            for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
+                var leftX, leftY,
+                    rightX, rightY;
 
-            var sinI = Math.sin(i),
-                cosI = Math.cos(i),
-                sinIr = Math.sin(i + this.rayWidth + 0.05),
-                cosIr = Math.cos(i + this.rayWidth + 0.05);
+                var sinI = Math.sin(i),
+                    cosI = Math.cos(i),
+                    sinIr = Math.sin(i + this.rayWidth + 0.05),
+                    cosIr = Math.cos(i + this.rayWidth + 0.05);
 
-            for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
-                leftX = j * sinI;
-                leftY = j * cosI;
-                rightX = j * sinIr;
-                rightY = j * cosIr;
+                for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
+                    leftX = j * sinI;
+                    leftY = j * cosI;
+                    rightX = j * sinIr;
+                    rightY = j * cosIr;
 
-                try {
-                    var tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x) / 32),
-                        tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y) / 32);
+                    try {
+                        var tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x) / 32),
+                            tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y) / 32);
 
-                    var tile = me.game.collisionMap.layerData[tileX][tileY];
-                    if(tile && tile.tileId === 1) {
-                        //ctx.fillRect(tile.pos.x - this.vp.pos.x, tile.pos.y - this.vp.pos.y,
-                        //    tile.width, tile.height);
-                        break;
-                    }
-                } catch(e) { break; }
+                        var tile = me.game.collisionMap.layerData[tileX][tileY];
+                        if(tile && tile.tileId === 1) {
+                            //ctx.fillRect(tile.pos.x - this.vp.pos.x, tile.pos.y - this.vp.pos.y,
+                            //    tile.width, tile.height);
+                            break;
+                        }
+                    } catch(e) { break; }
+                }
+
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + leftX, y + leftY);
+                ctx.lineTo(x + rightX, y + rightY);
+                ctx.closePath();
             }
 
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + leftX, y + leftY);
-            ctx.lineTo(x + rightX, y + rightY);
-            ctx.closePath();
+            ctx.fill();
         }
-
-        ctx.fill();
     }
 });
 
 var ShadowEntity = me.ObjectEntity.extend({
-    init: function(x, y, settings) {
+    init: function() {
     },
 
     update: function() {
@@ -299,16 +314,17 @@ var ShadowEntity = me.ObjectEntity.extend({
     },
 
     draw: function(ctx) {
-        console.log('draw');
-        var lighting = me.game.lighting;
+        if(me.game.lighting.enabled) {
+            var lighting = me.game.lighting.ctx;
 
-        lighting.globalCompositeOperation = 'xor';
-        lighting.fillStyle = 'rgba(0,0,0,0.92)';
-        lighting.fillRect(0, 0, 640, 480);
+            lighting.globalCompositeOperation = 'xor';
+            lighting.fillStyle = 'rgba(0,0,0,0.92)';
+            lighting.fillRect(0, 0, 640, 480);
 
-        ctx.drawImage(lighting.canvas, 0, 0);
+            ctx.drawImage(lighting.canvas, 0, 0);
 
-        lighting.clearRect(0, 0, 640, 480);
+            lighting.clearRect(0, 0, 640, 480);
+        }
     }
 });
 

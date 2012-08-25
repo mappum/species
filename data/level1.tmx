@@ -70,7 +70,4 @@
    </properties>
   </object>
  </objectgroup>
- <objectgroup name="shadow" width="60" height="30">
-  <object name="ShadowEntity" x="0" y="0" width="32" height="32"/>
- </objectgroup>
 </map>
