@@ -78,10 +78,8 @@ var game = {
         me.input.bindKey(me.input.KEY.D, 'right');
         me.input.bindKey(me.input.KEY.W, 'jump', true);
         me.input.bindKey(me.input.KEY.SPACE, 'jump', true);
-        me.input.bindKey(me.input.KEY.X, 'shoot');
 
         try { me.input.registerMouseEvent(); } catch(e) {}
-        me.input.bindMouse(me.input.mouse.LEFT, me.input.KEY.X);
 
         me.state.change(me.state.PLAY);
     }
@@ -113,9 +111,6 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.animationspeed = me.sys.fps / 16;
 
-        this.lastShoot = 0;
-        this.shootCooldown = 500;
-
         this.lightWidth = 50 * Math.PI / 180;
         this.rayWidth = 0.3 * Math.PI / 180;
         this.rayLength = 1000;
@@ -140,8 +135,6 @@ var PlayerEntity = me.ObjectEntity.extend({
             dy = me.input.mouse.pos.y - y;
         this.aimAngle = Math.atan2(dy, dx);
 
-        if(me.input.isKeyPressed('shoot')) this.doShoot();
-
         this.updateMovement();
 
         if(this.vel.x === 0) {
@@ -155,21 +148,17 @@ var PlayerEntity = me.ObjectEntity.extend({
 
     draw: function(ctx) {
         this.parent(ctx);
-
-        ctx.save();
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
-        ctx.translate(x + 4, y + 24);
-        ctx.rotate(this.aimAngle - Math.PI / 2);
-        ctx.drawImage(this.armImage, -2, -2);
-        ctx.restore();
 
         ctx.save();
-        ctx.translate(x + 4, y + 24);
+        var offsetX = (x + 4) + 26 * Math.sin(-this.aimAngle + Math.PI / 2),
+            offsetY = (y + 24) + 26 * Math.cos(-this.aimAngle + Math.PI / 2);
+        ctx.translate(offsetX, offsetY);
         ctx.fillStyle = '#fff';
-
         var rayStart = (-this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
         var rayEnd = (this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
+        ctx.beginPath();
         for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
             var leftX, leftY,
                 rightX, rightY;
@@ -186,20 +175,25 @@ var PlayerEntity = me.ObjectEntity.extend({
                 rightY = j * cosIr;
 
                 try {
-                    var tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x + 4) / 32),
-                        tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y + 24) / 32);
+                    var tileX = Math.floor(((leftX + rightX) / 2 + offsetX + this.vp.pos.x) / 32),
+                        tileY = Math.floor(((leftY + rightY) / 2 + offsetY + this.vp.pos.y) / 32);
 
                     var tile = me.game.collisionMap.layerData[tileX][tileY];
                     if(tile && tile.tileId === 1) break;
                 } catch(e) { break; }
             }
 
-            ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(leftX, leftY);
             ctx.lineTo(rightX, rightY);
-            ctx.fill();
         }
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(x + 4, y + 24);
+        ctx.rotate(this.aimAngle - Math.PI / 2);
+        ctx.drawImage(this.armImage, -2, -2);
         ctx.restore();
     },
 
@@ -213,24 +207,6 @@ var PlayerEntity = me.ObjectEntity.extend({
     doJump: function() {
         me.audio.play('jump');
         this.parent();
-    },
-
-    doShoot: function() {
-        var now = Date.now();
-        if(now - this.lastShoot >= this.shootCooldown) {
-            me.audio.play('shoot');
-
-            this.lastShoot = now;
-
-            me.game.add(new ProjectileEntity(this.pos.x, this.pos.y, {
-                x: this.pos.x,
-                y: this.pos.y,
-                angle: this.aimAngle,
-                power: 12,
-                name: 'ProjectileEntity'
-            }), 5);
-            me.game.sort();
-        }
     }
 });
 
