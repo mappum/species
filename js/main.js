@@ -22,6 +22,11 @@ var resources = [{
     name: "level1",
     type: "tmx",
     src: "data/level1.tmx"
+}, {
+    name: "shoot",
+    type: "audio",
+    src: "audio/",
+    channel: 1
 }];
 
 //me.debug.renderHitBox = true;
@@ -32,8 +37,9 @@ var game = {
             alert("Sorry, your browser does not support this game :(");
             return;
         }
+
+        me.audio.init("mp3,ogg,wav");
  
-        me.audio.init("mp3,ogg");
         me.loader.onload = this.loaded.bind(this);
         me.loader.preload(resources);
         me.state.change(me.state.LOADING);
@@ -48,7 +54,7 @@ var game = {
         me.input.bindKey(me.input.KEY.D, 'right');
         me.input.bindKey(me.input.KEY.W, 'jump', true);
         me.input.bindKey(me.input.KEY.SPACE, 'jump', true);
-        me.input.bindKey(me.input.KEY.X, 'shoot', true);
+        me.input.bindKey(me.input.KEY.X, 'shoot');
 
         try { me.input.registerMouseEvent(); } catch(e) {}
         me.input.bindMouse(me.input.mouse.LEFT, me.input.KEY.X);
@@ -81,6 +87,9 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.animationspeed = me.sys.fps / 16;
 
+        this.lastShoot = 0;
+        this.shootCooldown = 500;
+
         this.updateColRect(0, this.width, 0, this.height);
 
         me.game.viewport.follow(this.pos, me.game.viewport.AXIS.BOTH);
@@ -100,16 +109,7 @@ var PlayerEntity = me.ObjectEntity.extend({
             dy = me.input.mouse.pos.y - y;
         this.aimAngle = Math.atan2(dy, dx);
 
-        if(me.input.isKeyPressed('shoot')) {
-            me.game.add(new ProjectileEntity(this.pos.x, this.pos.y, {
-                x: this.pos.x,
-                y: this.pos.y,
-                angle: this.aimAngle,
-                power: 12,
-                name: 'ProjectileEntity'
-            }), 5);
-            me.game.sort();
-        }
+        if(me.input.isKeyPressed('shoot')) this.doShoot();
 
         this.updateMovement();
 
@@ -141,6 +141,24 @@ var PlayerEntity = me.ObjectEntity.extend({
         if(this.vel.x !== 0) {
             this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
             if(Math.abs(this.vel.x) <= 1) this.vel.x = 0;
+        }
+    },
+
+    doShoot: function() {
+        var now = Date.now();
+        if(now - this.lastShoot >= this.shootCooldown) {
+            me.audio.play('shoot');
+
+            this.lastShoot = now;
+
+            me.game.add(new ProjectileEntity(this.pos.x, this.pos.y, {
+                x: this.pos.x,
+                y: this.pos.y,
+                angle: this.aimAngle,
+                power: 12,
+                name: 'ProjectileEntity'
+            }), 5);
+            me.game.sort();
         }
     }
 });
