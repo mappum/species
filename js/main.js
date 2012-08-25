@@ -67,12 +67,14 @@ var game = {
         me.loader.preload(resources);
         me.state.change(me.state.LOADING);
     },
+
     loaded: function() {
         me.state.set(me.state.PLAY, new GameScreen());
 
         me.entityPool.add('PlayerEntity', PlayerEntity);
         me.entityPool.add('EnemyEntity', EnemyEntity);
-        me.entityPool.add('ProjectileEntity', ProjectileEntity);
+        me.entityPool.add('LightEntity', LightEntity);
+        me.entityPool.add('ShadowEntity', ShadowEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
@@ -88,6 +90,8 @@ var game = {
 var GameScreen = me.ScreenObject.extend({
     onResetEvent: function() {
         me.levelDirector.loadLevel('level1');
+
+        me.game.lighting = me.video.createCanvasSurface(640, 480);
     },
 
     onDestroyEvent: function() {
@@ -111,12 +115,16 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.animationspeed = me.sys.fps / 16;
 
-        this.lightWidth = 50 * Math.PI / 180;
-        this.rayWidth = 0.3 * Math.PI / 180;
-        this.rayLength = 1000;
-        this.rayPrecision = 3;
-
         this.updateColRect(0, this.width, 0, this.height);
+
+        this.lightEntity = new LightEntity(x, y, {
+            x: x,
+            y: y,
+            angle: 0,
+            width: 65
+        });
+        me.game.add(this.lightEntity, this.z);
+        me.game.sort();
 
         me.game.viewport.follow(this.pos, me.game.viewport.AXIS.BOTH);
     },
@@ -133,7 +141,11 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         var dx = me.input.mouse.pos.x - x,
             dy = me.input.mouse.pos.y - y;
-        this.aimAngle = Math.atan2(dy, dx);
+        this.aimAngle = Math.atan2(dy, dx) - Math.PI / 2;
+
+        this.lightEntity.angle = this.aimAngle;
+        this.lightEntity.pos.x = this.pos.x + 4 - 18 * Math.sin(this.aimAngle);
+        this.lightEntity.pos.y = this.pos.y + 24 + 18 * Math.cos(this.aimAngle);
 
         this.updateMovement();
 
@@ -148,51 +160,13 @@ var PlayerEntity = me.ObjectEntity.extend({
 
     draw: function(ctx) {
         this.parent(ctx);
+
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
 
         ctx.save();
-        var offsetX = (x + 4) + 26 * Math.sin(-this.aimAngle + Math.PI / 2),
-            offsetY = (y + 24) + 26 * Math.cos(-this.aimAngle + Math.PI / 2);
-        ctx.translate(offsetX, offsetY);
-        ctx.fillStyle = '#fff';
-        var rayStart = (-this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
-        var rayEnd = (this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
-        ctx.beginPath();
-        for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
-            var leftX, leftY,
-                rightX, rightY;
-
-            var sinI = Math.sin(i),
-                cosI = Math.cos(i),
-                sinIr = Math.sin(i + this.rayWidth + 0.05),
-                cosIr = Math.cos(i + this.rayWidth + 0.05);
-
-            for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
-                leftX = j * sinI;
-                leftY = j * cosI;
-                rightX = j * sinIr;
-                rightY = j * cosIr;
-
-                try {
-                    var tileX = Math.floor(((leftX + rightX) / 2 + offsetX + this.vp.pos.x) / 32),
-                        tileY = Math.floor(((leftY + rightY) / 2 + offsetY + this.vp.pos.y) / 32);
-
-                    var tile = me.game.collisionMap.layerData[tileX][tileY];
-                    if(tile && tile.tileId === 1) break;
-                } catch(e) { break; }
-            }
-
-            ctx.moveTo(0, 0);
-            ctx.lineTo(leftX, leftY);
-            ctx.lineTo(rightX, rightY);
-        }
-        ctx.fill();
-        ctx.restore();
-
-        ctx.save();
         ctx.translate(x + 4, y + 24);
-        ctx.rotate(this.aimAngle - Math.PI / 2);
+        ctx.rotate(this.aimAngle);
         ctx.drawImage(this.armImage, -2, -2);
         ctx.restore();
     },
@@ -248,40 +222,93 @@ var EnemyEntity = me.ObjectEntity.extend({
     }
 });
 
-var ProjectileEntity = me.ObjectEntity.extend({
+var LightEntity = me.ObjectEntity.extend({
     init: function(x, y, settings) {
-        settings.image = settings.image || 'bullet';
+        settings.image = 'null';
+
         this.parent(x, y, settings);
 
-        this.collidable = true;
-        this.gravity = 0;
+        this.angle = (settings.angle || 0) * Math.PI / 180;
+        this.width = (settings.width || 45) * Math.PI / 180;
 
-        this.setFriction(0, 0);
-
-        this.power = settings.power || 12;
-        this.angle = settings.angle || 0;
-
-        var velX = this.power * Math.cos(this.angle),
-            velY = this.power * Math.sin(this.angle);
-        this.vel = new me.Vector2d(velX, velY);
-        this.startVel = new me.Vector2d(velX, velY);
+        this.rayWidth = (settings.rayWidth || 1) * Math.PI / 180;
+        this.rayPrecision = settings.rayPrecision || 4;
+        this.rayLength = settings.rayLength || 1000;
     },
 
     update: function() {
-        this.updateMovement();
+        return false;
+    },
 
-        me.game.collide(this);
-        if(this.vel.x !== this.startVel.x || this.vel.y !== this.startVel.y) this.onWorldCollision();
+    draw: function(ctx) {
+        ctx = me.game.lighting;
 
+        var x = ~~(this.pos.x - this.vp.pos.x),
+            y = ~~(this.pos.y - this.vp.pos.y);
+
+        var rayStart = (-this.width / 2) - this.angle;
+        var rayEnd = (this.width / 2) - this.angle;
+
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+
+        for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
+            var leftX, leftY,
+                rightX, rightY;
+
+            var sinI = Math.sin(i),
+                cosI = Math.cos(i),
+                sinIr = Math.sin(i + this.rayWidth + 0.05),
+                cosIr = Math.cos(i + this.rayWidth + 0.05);
+
+            for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
+                leftX = j * sinI;
+                leftY = j * cosI;
+                rightX = j * sinIr;
+                rightY = j * cosIr;
+
+                try {
+                    var tileX = Math.floor(((leftX + rightX) / 2 + this.pos.x) / 32),
+                        tileY = Math.floor(((leftY + rightY) / 2 + this.pos.y) / 32);
+
+                    var tile = me.game.collisionMap.layerData[tileX][tileY];
+                    if(tile && tile.tileId === 1) {
+                        //ctx.fillRect(tile.pos.x - this.vp.pos.x, tile.pos.y - this.vp.pos.y,
+                        //    tile.width, tile.height);
+                        break;
+                    }
+                } catch(e) { break; }
+            }
+
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + leftX, y + leftY);
+            ctx.lineTo(x + rightX, y + rightY);
+            ctx.closePath();
+        }
+
+        ctx.fill();
+    }
+});
+
+var ShadowEntity = me.ObjectEntity.extend({
+    init: function(x, y, settings) {
+    },
+
+    update: function() {
         return true;
     },
 
-    onCollision: function(res, obj) {
-        this.collidable = false;
-    },
+    draw: function(ctx) {
+        console.log('draw');
+        var lighting = me.game.lighting;
 
-    onWorldCollision: function() {
-        me.game.remove(this);
+        lighting.globalCompositeOperation = 'xor';
+        lighting.fillStyle = 'rgba(0,0,0,0.92)';
+        lighting.fillRect(0, 0, 640, 480);
+
+        ctx.drawImage(lighting.canvas, 0, 0);
+
+        lighting.clearRect(0, 0, 640, 480);
     }
 });
 
