@@ -20,6 +20,10 @@ var resources = [
     name: "scientist_arm",
     type: "image",
     src: "img/scientist_arm.png"
+}, {
+    name: "enemy",
+    type: "image",
+    src: "img/enemy.png"
 },
 
 // data
@@ -37,6 +41,11 @@ var resources = [
     channel: 1
 }, {
     name: "jump",
+    type: "audio",
+    src: "audio/",
+    channel: 1
+}, {
+    name: "roar",
     type: "audio",
     src: "audio/",
     channel: 1
@@ -62,6 +71,7 @@ var game = {
         me.state.set(me.state.PLAY, new GameScreen());
 
         me.entityPool.add('PlayerEntity', PlayerEntity);
+        me.entityPool.add('EnemyEntity', EnemyEntity);
         me.entityPool.add('ProjectileEntity', ProjectileEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
@@ -90,7 +100,9 @@ var PlayerEntity = me.ObjectEntity.extend({
     init: function(x, y, settings) {
         settings.image = 'scientist';
         settings.spritewidth = 24;
+
         this.armImage = me.loader.getImage('scientist_arm');
+        this.aimAngle = 0;
 
         this.parent(x, y, settings);
 
@@ -103,6 +115,11 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.lastShoot = 0;
         this.shootCooldown = 500;
+
+        this.lightWidth = 40 * Math.PI / 180;
+        this.rayWidth = 1 * Math.PI / 180;
+        this.rayLength = 1000;
+        this.rayPrecision = 4;
 
         this.updateColRect(0, this.width, 0, this.height);
 
@@ -140,14 +157,52 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.parent(ctx);
 
         ctx.save();
-        
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
-
         ctx.translate(x + 4, y + 24);
         ctx.rotate(this.aimAngle - Math.PI / 2);
         ctx.drawImage(this.armImage, -2, -2);
+        ctx.restore();
 
+        ctx.save();
+        ctx.translate(x + 4, y + 24);
+        ctx.fillStyle = '#fff';
+
+        var rayStart = (-this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
+        var rayEnd = (this.lightWidth / 2) - this.aimAngle + Math.PI / 2;
+        for(var i = rayStart; i < rayEnd; i += this.rayWidth) {
+            var leftX, leftY,
+                rightX, rightY;
+
+            var sinI = Math.sin(i),
+                cosI = Math.cos(i),
+                sinIr = Math.sin(i + this.rayWidth),
+                cosIr = Math.cos(i + this.rayWidth);
+
+            for(var j = this.rayPrecision; j < this.rayLength; j += this.rayPrecision) {
+                leftX = j * sinI;
+                leftY = j * cosI;
+                rightX = j * sinIr;
+                rightY = j * cosIr;
+
+                try {
+                    var tileX = Math.floor((leftX + this.pos.x + 4) / 32),
+                        tileY = Math.floor((leftY + this.pos.y + 24) / 32);
+
+                    if(me.game.collisionMap.layerData[tileX][tileY] !== null) {
+                        break;
+                    }
+                } catch(e) {
+                    break;
+                }
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(leftX, leftY);
+            ctx.lineTo(rightX, rightY);
+            ctx.fill();
+        }
         ctx.restore();
     },
 
@@ -179,6 +234,44 @@ var PlayerEntity = me.ObjectEntity.extend({
             }), 5);
             me.game.sort();
         }
+    }
+});
+
+var EnemyEntity = me.ObjectEntity.extend({
+    init: function(x, y, settings) {
+        settings.image = 'enemy';
+
+        this.parent(x, y, settings);
+
+        this.collidable = true;
+
+        this.attackRange = settings.attackRange || 80;
+
+        this.setVelocity(6, 12);
+
+        this.target = me.game.getEntityByName('PlayerEntity')[0];
+    },
+
+    update: function() {
+        if(Math.abs(this.target.pos.x - this.pos.x) > 10) {
+            if(this.target.pos.x < this.pos.x) this.doWalk(true);
+            else this.doWalk(false);
+        } else {
+            this.vel.x = 0;
+        }
+
+        if(this.distanceTo(this.target) < this.attackRange) {
+            this.doAttack();
+        }
+
+        this.updateMovement();
+
+        return true;
+    },
+
+    doAttack: function() {
+        this.doJump();
+        me.audio.play('roar');
     }
 });
 
