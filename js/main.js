@@ -1,4 +1,6 @@
-var resources = [{
+var resources = [
+// images
+{
     name: "null",
     type: "image",
     src: "img/null.png"
@@ -18,16 +20,28 @@ var resources = [{
     name: "scientist_arm",
     type: "image",
     src: "img/scientist_arm.png"
-}, {
+},
+
+// data
+{
     name: "level1",
     type: "tmx",
     src: "data/level1.tmx"
-}, {
+},
+
+// audio
+{
     name: "shoot",
     type: "audio",
     src: "audio/",
     channel: 1
-}];
+}, {
+    name: "jump",
+    type: "audio",
+    src: "audio/",
+    channel: 1
+}
+];
 
 //me.debug.renderHitBox = true;
  
@@ -142,6 +156,11 @@ var PlayerEntity = me.ObjectEntity.extend({
             this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
             if(Math.abs(this.vel.x) <= 1) this.vel.x = 0;
         }
+    },
+
+    doJump: function() {
+        me.audio.play('jump');
+        this.parent();
     },
 
     doShoot: function() {
