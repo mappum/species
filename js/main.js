@@ -19,6 +19,14 @@ var resources = [{
     type: "image",
     src: "img/bullet.png"
 }, {
+    name: "scientist",
+    type: "image",
+    src: "img/scientist.png"
+}, {
+    name: "scientist_arm",
+    type: "image",
+    src: "img/scientist_arm.png"
+}, {
     name: "level1",
     type: "tmx",
     src: "data/level1.tmx"
@@ -46,8 +54,8 @@ var game = {
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
-        me.input.bindKey(me.input.KEY.W, 'jump');
-        me.input.bindKey(me.input.KEY.SPACE, 'jump');
+        me.input.bindKey(me.input.KEY.W, 'jump', true);
+        me.input.bindKey(me.input.KEY.SPACE, 'jump', true);
         me.input.bindKey(me.input.KEY.X, 'shoot', true);
 
         try { me.input.registerMouseEvent(); } catch(e) {}
@@ -68,15 +76,19 @@ var GameScreen = me.ScreenObject.extend({
 
 var PlayerEntity = me.ObjectEntity.extend({
     init: function(x, y, settings) {
-        settings.image = 'null';
-        this.parent(x, y, settings);
+        settings.image = 'scientist';
+        settings.spritewidth = 24;
+        this.armImage = me.loader.getImage('scientist_arm');
 
-        this.width = settings.width;
-        this.height = settings.height;
+        this.parent(x, y, settings);
 
         this.collidable = true;
 
-        this.setVelocity(7, 17);
+        this.setVelocity(4, 12);
+        this.accel = new me.Vector2d(0.7, 10);
+
+        this.animationspeed = me.sys.fps / 16;
+
         this.updateColRect(0, this.width, 0, this.height);
 
         me.game.viewport.follow(this.pos, me.game.viewport.AXIS.BOTH);
@@ -109,6 +121,12 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.updateMovement();
 
+        if(this.vel.x === 0) {
+            this.setAnimationFrame(0);
+        } else {
+            this.parent();
+        }
+
         return true;
     },
 
@@ -120,14 +138,9 @@ var PlayerEntity = me.ObjectEntity.extend({
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
 
-        ctx.fillStyle = '#000';
-        ctx.fillRect(x, y,
-            this.width, this.height);
-
-        ctx.translate(x + 16, y + 16);
-        ctx.fillStyle = '#fff';
-        ctx.rotate(this.aimAngle);
-        ctx.fillRect(-4, -8, 32, 16);
+        ctx.translate(x + 4, y + 24);
+        ctx.rotate(this.aimAngle - Math.PI / 2);
+        ctx.drawImage(this.armImage, -2, -2);
 
         ctx.restore();
     },
@@ -135,6 +148,7 @@ var PlayerEntity = me.ObjectEntity.extend({
     doStop: function() {
         if(this.vel.x !== 0) {
             this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
+            if(Math.abs(this.vel.x) <= 1) this.vel.x = 0;
         }
     }
 });
