@@ -11,12 +11,16 @@ var resources = [{
     type: "image",
     src: "img/sky.png"
 }, {
+    name: "tiles",
+    type: "image",
+    src: "img/tiles.png"
+}, {
     name: "level1",
     type: "tmx",
     src: "data/level1.tmx"
 }];
 
-//me.debug.renderHitBox = true;
+me.debug.renderHitBox = true;
  
 var game = {
     onload: function() {
@@ -37,9 +41,12 @@ var game = {
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
-        me.input.bindKey(me.input.KEY.W, 'jump', true);
+        me.input.bindKey(me.input.KEY.W, 'jump');
+        me.input.bindKey(me.input.KEY.SPACE, 'jump');
+        me.input.bindKey(me.input.KEY.X, 'shoot');
 
         try { me.input.registerMouseEvent(); } catch(e) {}
+        me.input.bindMouse(me.input.mouse.LEFT, me.input.KEY.X);
 
 
         window.addEventListener('mousemove', function(e) {
@@ -80,22 +87,26 @@ var PlayerEntity = me.ObjectEntity.extend({
 
         this.collidable = true;
 
-        this.setVelocity(6, 18);
+        this.setVelocity(7, 17);
+        this.updateColRect(0, this.width, 0, this.height);
 
         me.game.viewport.follow(this.pos, me.game.viewport.AXIS.BOTH);
     },
 
     update: function() {
         if(me.input.isKeyPressed('left')) this.doWalk(true);
-        else if(me.input.isKeyPressed('right')) this.doWalk();
+        else if(me.input.isKeyPressed('right')) this.doWalk(false);
+        else this.doStop();
 
         if(me.input.isKeyPressed('jump')) this.doJump();
 
+        if(me.input.isKeyPressed('shoot')) console.log('shoot')
+
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
-        var dx = me.input.mouse.pos.x - x;
-        var dy = me.input.mouse.pos.y - y;
-        console.log(this.pos.x, this.pos.y)
+
+        var dx = me.input.mouse.pos.x - x,
+            dy = me.input.mouse.pos.y - y;
         this.aimAngle = Math.atan2(dy, dx);
 
         this.updateMovement();
@@ -110,18 +121,23 @@ var PlayerEntity = me.ObjectEntity.extend({
         
         var x = ~~(this.pos.x - this.vp.pos.x),
             y = ~~(this.pos.y - this.vp.pos.y);
-        ctx.translate(x, y);
 
         ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0,
+        ctx.fillRect(x, y,
             this.width, this.height);
 
+        ctx.translate(x + 16, y + 16);
         ctx.fillStyle = '#fff';
         ctx.rotate(this.aimAngle);
-        ctx.fillRect(-this.width / 4, -this.height / 4,
-            this.width / 2, this.height / 2);
+        ctx.fillRect(-4, -8, 32, 16);
 
         ctx.restore();
+    },
+
+    doStop: function() {
+        if(this.vel.x !== 0) {
+            this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
+        }
     }
 });
 
