@@ -162,6 +162,8 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.parent(x, y, settings);
         this.GUID = settings.GUID || this.GUID;
 
+        this.isPlayer = true;
+
         this.collidable = true;
 
         this.setVelocity(3, 12);
@@ -379,8 +381,10 @@ var LightEntity = me.ObjectEntity.extend({
 
                         var tile = me.game.collisionMap.layerData[tileX][tileY];
                         if(tile && tile.tileId === 1) {
-                            //ctx.fillRect(tile.pos.x - this.vp.pos.x, tile.pos.y - this.vp.pos.y,
-                            //    tile.width, tile.height);
+                            if(tile.reflective) {
+                                ctx.fillRect(tile.pos.x - this.vp.pos.x, tile.pos.y - this.vp.pos.y,
+                                    tile.width, tile.height);
+                            }
                             break;
                         }
                     } catch(e) { break; }
@@ -501,6 +505,7 @@ var TriggerEntity = me.InvisibleEntity.extend({
         this.GUID = settings.GUID || this.GUID;
 
         this.locked = false;
+        this.collidable = false;
 
         if(settings.onTrigger) this.onTrigger = new Function(settings.onTrigger);
         if(settings.onceTrigger) this.onceTrigger = new Function(settings.onceTrigger);
@@ -516,7 +521,7 @@ var TriggerEntity = me.InvisibleEntity.extend({
 
         var res = me.game.collide(this);
 
-        if(res && res.obj.GUID === 'mainPlayer') {
+        if(res && res.obj.isPlayer) {
             if(this.preTrigger && !this.locked) {
                 this.preTrigger(res);
                 this.locked = true;
@@ -542,7 +547,7 @@ var TriggerEntity = me.InvisibleEntity.extend({
             this.locked = false;
         }
 
-        return false;
+        return true;
     }
 });
 
@@ -561,7 +566,7 @@ var DoorEntity = me.ObjectEntity.extend({
     update: function() {
         var i;
 
-        if(this.lastState !== this.open) {
+        if(this.lastState === undefined || this.lastState !== this.open) {
             if(this.open) {
                 if(this.lastState !== undefined) me.audio.play('open');
                 for(i = 0; i < 3; i++) {
@@ -571,12 +576,13 @@ var DoorEntity = me.ObjectEntity.extend({
                 if(this.lastState !== undefined) me.audio.play('close');
                 for(i = 0; i < 3; i++) {
                     me.game.collisionMap.setTile(this.tileX, this.tileY + i, 1);
+                    me.game.collisionMap.layerData[this.tileX][this.tileY + i].reflective = true;
                 }
             }
             this.lastState = this.open;
         }
 
-        return false;
+        return true;
     },
 
     draw: function(ctx) {
