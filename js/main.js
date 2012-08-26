@@ -43,6 +43,11 @@ var resources = [
     type: "audio",
     src: "audio/",
     channel: 1
+}, {
+    name: "step",
+    type: "audio",
+    src: "audio/",
+    channel: 1
 }
 ];
 
@@ -119,6 +124,8 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.accel = new me.Vector2d(0.7, 10);
 
         this.animationspeed = me.sys.fps / 13;
+        this.stepSpeed = me.sys.fps / 26;
+        this.lastStep = 0;
 
         this.updateColRect(0, this.width, 0, this.height);
 
@@ -179,6 +186,16 @@ var PlayerEntity = me.ObjectEntity.extend({
         ctx.rotate(this.aimAngle);
         ctx.drawImage(this.armImage, -2, -2);
         ctx.restore();
+    },
+
+    doWalk: function(left) {
+        var now = Date.now();
+        if(now - this.lastStep >= 1000 / this.stepSpeed) {
+            me.audio.play('step');
+            this.lastStep = now;
+        }
+
+        this.parent(left);
     },
 
     doStop: function() {
