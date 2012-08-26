@@ -409,7 +409,7 @@ var LightEntity = me.ObjectEntity.extend({
         var difference = Math.min(Math.abs(this.angle - angleTo),
             Math.abs(this.angle - angleTo - Math.PI * 2));
 
-        if(difference <= this.width / 2) return true;
+        if(difference <= this.width) return true;
         return false;
     }
 });
