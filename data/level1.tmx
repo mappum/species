@@ -53,11 +53,6 @@
   </data>
  </layer>
  <objectgroup name="entities" width="60" height="30">
-  <object name="PlayerEntity" x="96" y="352" width="32" height="64">
-   <properties>
-    <property name="GUID" value="mainPlayer"/>
-   </properties>
-  </object>
   <object name="EnemyEntity" x="1120" y="352" width="32" height="64"/>
   <object name="TextEntity" x="224" y="352" width="32" height="64">
    <properties>
@@ -81,6 +76,11 @@
    </properties>
   </object>
   <object x="896" y="736"/>
+  <object name="PlayerEntity" x="96" y="352" width="32" height="64">
+   <properties>
+    <property name="GUID" value="mainPlayer"/>
+   </properties>
+  </object>
  </objectgroup>
  <layer name="collision" width="60" height="30" visible="0">
   <data encoding="base64">

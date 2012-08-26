@@ -201,11 +201,11 @@ var EnemyEntity = me.ObjectEntity.extend({
         this.attackCooldown = 2000;
 
         this.setVelocity(6, 12);
-
-        this.target = me.game.getEntityByName('PlayerEntity')[0];
     },
 
     update: function() {
+        if(!this.target) this.target = me.game.getEntityByGUID('mainPlayer');
+
         if(Math.abs(this.target.pos.x - this.pos.x) > 10) {
             if(this.target.pos.x < this.pos.x) this.doWalk(true);
             else this.doWalk(false);
