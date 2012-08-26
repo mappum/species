@@ -28,6 +28,10 @@ var resources = [
     name: "pc",
     type: "image",
     src: "img/pc.png"
+}, {
+    name: "door",
+    type: "image",
+    src: "img/door.png"
 },
 
 // data
@@ -105,6 +109,7 @@ var game = {
         me.entityPool.add('ShadowEntity', ShadowEntity);
         me.entityPool.add('TextEntity', TextEntity);
         me.entityPool.add('TriggerEntity', TriggerEntity);
+        me.entityPool.add('DoorEntity', DoorEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
@@ -280,10 +285,7 @@ var EnemyEntity = me.ObjectEntity.extend({
                 this.roarLock = false;
             } else {
                 this.vel.x = 0;
-                if(Math.abs(this.target.pos.x - this.pos.x) < 300 &&
-                Math.abs(this.target.pos.y - this.pos.y) < 50) {
-                    this.doAttack();
-                }
+                this.doAttack();
             }
 
             this.updateMovement();
@@ -293,18 +295,21 @@ var EnemyEntity = me.ObjectEntity.extend({
     },
 
     doAttack: function() {
-        if(this.target.light.pointingAt(this)) {
-            var now = Date.now();
-            if(now - this.lastAttack > this.attackCooldown) {
-                if(!this.roarLock) {
-                    me.audio.play('roar');
-                    this.roarLock = true;
+        var dx = Math.abs(this.target.pos.x - this.pos.x);
+        if(dx < 300 && Math.abs(this.target.pos.y - this.pos.y) < 50) {
+            if(this.target.light.pointingAt(this)) {
+                var now = Date.now();
+                if(now - this.lastAttack > this.attackCooldown) {
+                    if(!this.roarLock) {
+                        me.audio.play('roar');
+                        this.roarLock = true;
+                    }
+                    this.lastAttack = now;
                 }
-                this.lastAttack = now;
             }
+            this.target.health -= (360 - dx) * 0.00001;
+            this.target.lastEncounter = Date.now();
         }
-        this.target.health -= (360 - Math.abs(this.target.pos.x - this.pos.x)) * 0.00001;
-        this.target.lastEncounter = Date.now();
     }
 });
 
@@ -321,8 +326,8 @@ var LightEntity = me.ObjectEntity.extend({
         this.angle = (settings.angle || 0) * Math.PI / 180;
         this.width = (settings.width || 45) * Math.PI / 180;
 
-        this.rayWidth = (settings.rayWidth || 0.8) * Math.PI / 180;
-        this.rayPrecision = settings.rayPrecision || 2;
+        this.rayWidth = (settings.rayWidth || 1) * Math.PI / 180;
+        this.rayPrecision = settings.rayPrecision || 6;
         this.rayLength = settings.rayLength || 1000;
     },
 
@@ -485,8 +490,6 @@ var TriggerEntity = me.InvisibleEntity.extend({
         this.parent(x, y, settings);
         this.GUID = settings.GUID || this.GUID;
 
-        this.collidable = true;
-
         this.locked = false;
 
         if(settings.onTrigger) this.onTrigger = new Function(settings.onTrigger);
@@ -494,14 +497,16 @@ var TriggerEntity = me.InvisibleEntity.extend({
         if(settings.preTrigger) this.preTrigger = new Function(settings.preTrigger);
         if(settings.postTrigger) this.postTrigger = new Function(settings.postTrigger);
 
-        this.event = settings.event;
-        if(settings.target) this.target = me.game.getEntityByGUID(settings.target);
+        this.event = settings.event || 'trigger';
+        if(settings.target) this.target = settings.target;
     },
 
     update: function() {
+        if(typeof this.target === 'string') this.target = me.game.getEntityByGUID(this.target);
+
         var res = me.game.collide(this);
 
-        if(res) {
+        if(res && res.obj.GUID === 'mainPlayer') {
             if(this.preTrigger && !this.locked) {
                 this.preTrigger(res);
                 this.locked = true;
@@ -528,6 +533,40 @@ var TriggerEntity = me.InvisibleEntity.extend({
         }
 
         return false;
+    }
+});
+
+var DoorEntity = me.ObjectEntity.extend({
+    init: function(x, y, settings) {
+        settings.image = 'door';
+        this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
+
+        this.open = settings.open || false;
+
+        this.tileX = Math.floor(this.pos.x / 32);
+        this.tileY = Math.floor(this.pos.y / 32);
+    },
+
+    update: function() {
+        var i;
+        if(this.open) {
+            for(i = 0; i < 3; i++) {
+                me.game.collisionMap.clearTile(this.tileX, this.tileY + i);
+            }
+        } else {
+            for(i = 0; i < 3; i++) {
+                me.game.collisionMap.setTile(this.tileX, this.tileY + i, 1);
+            }
+        }
+
+        return false;
+    },
+
+    draw: function(ctx) {
+        if(!this.open) {
+            this.parent(ctx);
+        }
     }
 });
 
