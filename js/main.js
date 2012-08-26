@@ -62,6 +62,16 @@ var resources = [
     type: "audio",
     src: "audio/",
     channel: 1
+}, {
+    name: "open",
+    type: "audio",
+    src: "audio/",
+    channel: 1
+}, {
+    name: "close",
+    type: "audio",
+    src: "audio/",
+    channel: 1
 }
 ];
 
@@ -550,14 +560,20 @@ var DoorEntity = me.ObjectEntity.extend({
 
     update: function() {
         var i;
-        if(this.open) {
-            for(i = 0; i < 3; i++) {
-                me.game.collisionMap.clearTile(this.tileX, this.tileY + i);
+
+        if(this.lastState !== this.open) {
+            if(this.open) {
+                if(this.lastState !== undefined) me.audio.play('open');
+                for(i = 0; i < 3; i++) {
+                    me.game.collisionMap.clearTile(this.tileX, this.tileY + i);
+                }
+            } else {
+                if(this.lastState !== undefined) me.audio.play('close');
+                for(i = 0; i < 3; i++) {
+                    me.game.collisionMap.setTile(this.tileX, this.tileY + i, 1);
+                }
             }
-        } else {
-            for(i = 0; i < 3; i++) {
-                me.game.collisionMap.setTile(this.tileX, this.tileY + i, 1);
-            }
+            this.lastState = this.open;
         }
 
         return false;
