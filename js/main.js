@@ -24,6 +24,10 @@ var resources = [
     name: "enemy",
     type: "image",
     src: "img/enemy.png"
+}, {
+    name: "pc",
+    type: "image",
+    src: "img/pc.png"
 },
 
 // data
@@ -75,6 +79,7 @@ var game = {
         me.entityPool.add('EnemyEntity', EnemyEntity);
         me.entityPool.add('LightEntity', LightEntity);
         me.entityPool.add('ShadowEntity', ShadowEntity);
+        me.entityPool.add('TextEntity', TextEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
@@ -102,6 +107,7 @@ var GameScreen = me.ScreenObject.extend({
     },
 
     onDestroyEvent: function() {
+        me.game.disableHUD();
     }
 });
 
@@ -128,7 +134,8 @@ var PlayerEntity = me.ObjectEntity.extend({
             x: x,
             y: y,
             angle: 0,
-            width: 65
+            width: 65,
+            enabled: false
         });
         me.game.add(this.light, this.z);
         me.game.sort();
@@ -201,8 +208,6 @@ var EnemyEntity = me.ObjectEntity.extend({
 
         this.parent(x, y, settings);
 
-        this.collidable = true;
-
         this.attackRange = settings.attackRange || 80;
 
         this.setVelocity(6, 12);
@@ -239,7 +244,7 @@ var LightEntity = me.ObjectEntity.extend({
 
         this.parent(x, y, settings);
 
-        this.enabled = settings.enabled || true;
+        this.enabled = settings.enabled && true;
 
         this.angle = (settings.angle || 0) * Math.PI / 180;
         this.width = (settings.width || 45) * Math.PI / 180;
@@ -324,6 +329,62 @@ var ShadowEntity = me.ObjectEntity.extend({
             ctx.drawImage(lighting.canvas, 0, 0);
 
             lighting.clearRect(0, 0, 640, 480);
+        }
+    }
+});
+
+var TextEntity = me.ObjectEntity.extend({
+    init: function(x, y, settings) {
+        settings.image = 'pc';
+        this.parent(x, y, settings);
+
+        this.text = settings.text || '';
+        this.columns = settings.columns || 26;
+
+        this.collidable = true;
+        this.displaying = false;
+    },
+
+    update: function() {
+        var res = me.game.collide(this);
+        if(res) {
+            this.displaying = true;
+        } else {
+            this.displaying = false;
+        }
+
+        return false;
+    },
+
+    draw: function(ctx) {
+        this.parent(ctx);
+
+        if(this.displaying) {
+            ctx.font = '16pt volter';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#00ff24';
+
+            var lines = [this.text];
+            var i;
+
+            while(lines[lines.length - 1].length > this.columns) {
+                for(i = this.columns - 1; i >= 0; i--) {
+                    var line = lines.length - 1;
+                    if(lines[line].charAt(i) === ' ') {
+                        var head = lines[line].substr(0, i);
+                        lines.push(lines[line].substr(i + 1));
+                        lines[line] = head;
+                    }
+                }
+            }
+
+            var x = ~~(this.pos.x - this.vp.pos.x),
+                y = ~~(this.pos.y - this.vp.pos.y);
+
+            for(i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], x + 16,
+                    y - (lines.length - i) * 20);
+            }
         }
     }
 });
