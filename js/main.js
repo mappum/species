@@ -52,6 +52,14 @@ var resources = [
 ];
 
 //me.debug.renderHitBox = true;
+
+function setStatic(opacity) {
+    var staticImage = document.getElementById('static');
+    staticImage.style.opacity = opacity;
+
+    if(opacity <= 0) staticImage.style.display = 'none';
+    else staticImage.style.display = 'block';
+}
  
 var game = {
     onload: function() {
@@ -127,6 +135,10 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.stepSpeed = me.sys.fps / 26;
         this.lastStep = 0;
 
+        this.health = 1;
+        this.lastHealth = 1;
+        this.lastEncounter = 0;
+
         this.updateColRect(0, this.width, 0, this.height);
 
         this.light = new LightEntity(x, y, {
@@ -172,6 +184,15 @@ var PlayerEntity = me.ObjectEntity.extend({
             this.parent();
         }
 
+        if(Date.now() - this.lastEncounter > 2000) {
+            this.health += 0.002;
+        }
+
+        if(this.health !== this.lastHealth) {
+            setStatic(1 - this.health);
+            this.lastHealth = this.health;
+        }
+
         return true;
     },
 
@@ -215,7 +236,8 @@ var EnemyEntity = me.ObjectEntity.extend({
 
         this.attackRange = settings.attackRange || 80;
         this.lastAttack = 0;
-        this.attackCooldown = 8000;
+        this.attackCooldown = 16000;
+        this.roarLock = false;
 
         this.setVelocity(6, 12);
     },
@@ -223,28 +245,45 @@ var EnemyEntity = me.ObjectEntity.extend({
     update: function() {
         if(!this.target) this.target = me.game.getEntityByGUID('mainPlayer');
 
-        if(Math.abs(this.target.pos.x - this.pos.x) > 10) {
-            if(this.target.pos.x < this.pos.x) this.doWalk(true);
-            else this.doWalk(false);
-        } else {
-            this.vel.x = 0;
-        }
+        if(me.game.lighting.enabled) {
+            if(!this.target.light.pointingAt(this)) {
+                var dx = Math.abs(this.target.pos.x - this.pos.x);
 
-        if(this.distanceTo(this.target) < this.attackRange) {
-            this.doAttack();
-        }
+                if(dx > 120) {
+                    if(this.target.pos.x < this.pos.x) this.doWalk(true);
+                    else this.doWalk(false);
+                } else {
+                    this.vel.x = 0;
+                    if(dx < 100) this.doAttack();
+                }
+                this.roarLock = false;
+            } else {
+                this.vel.x = 0;
+                if(Math.abs(this.target.pos.x - this.pos.x) < 300 &&
+                Math.abs(this.target.pos.y - this.pos.y) < 50) {
+                    this.doAttack();
+                }
+            }
 
-        this.updateMovement();
+            this.updateMovement();
+        }
 
         return true;
     },
 
     doAttack: function() {
-        var now = Date.now();
-        if(now - this.lastAttack > this.attackCooldown) {
-            me.audio.play('roar');
-            this.lastAttack = now;
+        if(this.target.light.pointingAt(this)) {
+            var now = Date.now();
+            if(now - this.lastAttack > this.attackCooldown) {
+                if(!this.roarLock) {
+                    me.audio.play('roar');
+                    this.roarLock = true;
+                }
+                this.lastAttack = now;
+            }
         }
+        this.target.health -= (360 - Math.abs(this.target.pos.x - this.pos.x)) * 0.00001;
+        this.target.lastEncounter = Date.now();
     }
 });
 
@@ -319,6 +358,18 @@ var LightEntity = me.ObjectEntity.extend({
 
             ctx.fill();
         }
+    },
+
+    pointingAt: function(obj) {
+        var dx = obj.pos.x - this.pos.x,
+            dy = obj.pos.y - this.pos.y;
+        var angleTo = Math.atan2(dy, dx) - Math.PI / 2;
+
+        var difference = Math.min(Math.abs(this.angle - angleTo),
+            Math.abs(this.angle - angleTo - Math.PI * 2));
+
+        if(difference <= this.width / 2) return true;
+        return false;
     }
 });
 
@@ -401,7 +452,7 @@ var TextEntity = me.ObjectEntity.extend({
 
             for(i = 0; i < lines.length; i++) {
                 ctx.fillText(lines[i], x + 16,
-                    y - (lines.length - i) * 22);
+                    y - 40 - (lines.length - i) * 22);
             }
             ctx.restore();
         }
