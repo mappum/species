@@ -75,6 +75,7 @@ var game = {
         me.entityPool.add('LightEntity', LightEntity);
         me.entityPool.add('ShadowEntity', ShadowEntity);
         me.entityPool.add('TextEntity', TextEntity);
+        me.entityPool.add('TriggerEntity', TriggerEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
@@ -338,7 +339,7 @@ var TextEntity = me.ObjectEntity.extend({
         this.GUID = settings.GUID || this.GUID;
 
         this.text = settings.text || '';
-        this.columns = settings.columns || 26;
+        this.columns = settings.columns || 24;
 
         this.collidable = true;
         this.displaying = false;
@@ -371,12 +372,13 @@ var TextEntity = me.ObjectEntity.extend({
             var i;
 
             while(lines[lines.length - 1].length > this.columns) {
-                for(i = this.columns - 1; i >= 0; i--) {
+                for(i = this.columns; i >= 0; i--) {
                     var line = lines.length - 1;
+
                     if(lines[line].charAt(i) === ' ') {
-                        var head = lines[line].substr(0, i);
                         lines.push(lines[line].substr(i + 1));
-                        lines[line] = head;
+                        lines[line] = lines[line].substr(0, i);
+                        break;
                     }
                 }
             }
@@ -399,15 +401,32 @@ var TriggerEntity = me.InvisibleEntity.extend({
         this.GUID = settings.GUID || this.GUID;
 
         this.collidable = true;
+
+        this.locked = false;
+
+        if(settings.onTrigger) this.onTrigger = new Function(settings.onTrigger);
+        if(settings.onceTrigger) this.onceTrigger = new Function(settings.onceTrigger);
+
         this.event = settings.event;
-        this.target = me.game.getEntityByGUID(settings.target);
+        if(settings.target) this.target = me.game.getEntityByGUID(settings.target);
     },
 
     update: function() {
         var res = me.game.collide(this);
 
-        if(res && this.target && typeof this.target.onTrigger === 'function') {
-            this.target.onTrigger(this.event, res);
+        if(res) {
+            if(this.onceTrigger && !this.locked) {
+                this.onceTrigger(res);
+                this.locked = true;
+            }
+
+            if(this.onTrigger) {
+                this.onTrigger(res);
+            } else if(this.target && typeof this.target.onTrigger === 'function') {
+                this.target.onTrigger(this.event, res);
+            }
+        } else {
+            this.locked = false;
         }
 
         return false;
