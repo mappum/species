@@ -43,17 +43,21 @@
   </data>
  </layer>
  <objectgroup name="entities" width="60" height="30">
-  <object name="PlayerEntity" x="192" y="352" width="32" height="64"/>
-  <object name="EnemyEntity" x="1120" y="352" width="32" height="64"/>
-  <object name="TextEntity" x="288" y="352" width="32" height="64">
+  <object name="PlayerEntity" x="96" y="352" width="32" height="64">
    <properties>
-    <property name="text" value="Hello, world!"/>
+    <property name="GUID" value="mainPlayer"/>
+   </properties>
+  </object>
+  <object name="EnemyEntity" x="1120" y="352" width="32" height="64"/>
+  <object name="TextEntity" x="224" y="352" width="32" height="64">
+   <properties>
+    <property name="text" value="Welcome to Whitecliff Laborotories, the leaders in advanced bioengineering."/>
    </properties>
   </object>
   <object x="160" y="736" height="32"/>
-  <object name="TextEntity" x="384" y="352" width="32" height="64">
+  <object name="TextEntity" x="544" y="352" width="32" height="64">
    <properties>
-    <property name="text" value="Hello, world! Lorem ipsum dolor bl bla bla test text. Some text will be a few sentences long."/>
+    <property name="text" value="CAUTION: You are now entering a secure quarantined area."/>
    </properties>
   </object>
  </objectgroup>

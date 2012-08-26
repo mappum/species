@@ -44,11 +44,6 @@ var resources = [
     src: "audio/",
     channel: 1
 }, {
-    name: "jump",
-    type: "audio",
-    src: "audio/",
-    channel: 1
-}, {
     name: "roar",
     type: "audio",
     src: "audio/",
@@ -120,6 +115,7 @@ var PlayerEntity = me.ObjectEntity.extend({
         this.aimAngle = 0;
 
         this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
 
         this.collidable = true;
 
@@ -194,11 +190,6 @@ var PlayerEntity = me.ObjectEntity.extend({
             this.vel.x -= this.accel.x * me.timer.tick * this.vel.x > 0 ? 1 : -1;
             if(Math.abs(this.vel.x) <= 1) this.vel.x = 0;
         }
-    },
-
-    doJump: function() {
-        me.audio.play('jump');
-        this.parent();
     }
 });
 
@@ -207,8 +198,11 @@ var EnemyEntity = me.ObjectEntity.extend({
         settings.image = 'enemy';
 
         this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
 
         this.attackRange = settings.attackRange || 80;
+        this.lastAttack = 0;
+        this.attackCooldown = 2000;
 
         this.setVelocity(6, 12);
 
@@ -233,8 +227,11 @@ var EnemyEntity = me.ObjectEntity.extend({
     },
 
     doAttack: function() {
-        this.doJump();
-        me.audio.play('roar');
+        var now = Date.now();
+        if(now - this.lastAttack > this.attackCooldown) {
+            me.audio.play('roar');
+            this.lastAttack = now;
+        }
     }
 });
 
@@ -243,6 +240,7 @@ var LightEntity = me.ObjectEntity.extend({
         settings.image = 'null';
 
         this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
 
         this.enabled = settings.enabled && true;
 
@@ -311,8 +309,7 @@ var LightEntity = me.ObjectEntity.extend({
 });
 
 var ShadowEntity = me.ObjectEntity.extend({
-    init: function() {
-    },
+    init: function() {},
 
     update: function() {
         return true;
@@ -336,7 +333,9 @@ var ShadowEntity = me.ObjectEntity.extend({
 var TextEntity = me.ObjectEntity.extend({
     init: function(x, y, settings) {
         settings.image = 'pc';
+
         this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
 
         this.text = settings.text || '';
         this.columns = settings.columns || 26;
@@ -360,9 +359,13 @@ var TextEntity = me.ObjectEntity.extend({
         this.parent(ctx);
 
         if(this.displaying) {
+            ctx.save();
             ctx.font = '16pt volter';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#00ff24';
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+            ctx.shadowColor = 'black';
 
             var lines = [this.text];
             var i;
@@ -383,9 +386,31 @@ var TextEntity = me.ObjectEntity.extend({
 
             for(i = 0; i < lines.length; i++) {
                 ctx.fillText(lines[i], x + 16,
-                    y - (lines.length - i) * 20);
+                    y - (lines.length - i) * 22);
             }
+            ctx.restore();
         }
+    }
+});
+
+var TriggerEntity = me.InvisibleEntity.extend({
+    init: function(x, y, settings) {
+        this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
+
+        this.collidable = true;
+        this.event = settings.event;
+        this.target = me.game.getEntityByGUID(settings.target);
+    },
+
+    update: function() {
+        var res = me.game.collide(this);
+
+        if(res && this.target && typeof this.target.onTrigger === 'function') {
+            this.target.onTrigger(this.event, res);
+        }
+
+        return false;
     }
 });
 
