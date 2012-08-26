@@ -39,11 +39,6 @@ var resources = [
 
 // audio
 {
-    name: "shoot",
-    type: "audio",
-    src: "audio/",
-    channel: 1
-}, {
     name: "roar",
     type: "audio",
     src: "audio/",
@@ -243,13 +238,14 @@ var LightEntity = me.ObjectEntity.extend({
         this.parent(x, y, settings);
         this.GUID = settings.GUID || this.GUID;
 
-        this.enabled = settings.enabled && true;
+        if(settings.enabled !== undefined) this.enabled = settings.enabled;
+        else this.enabled = true;
 
         this.angle = (settings.angle || 0) * Math.PI / 180;
         this.width = (settings.width || 45) * Math.PI / 180;
 
-        this.rayWidth = (settings.rayWidth || 1) * Math.PI / 180;
-        this.rayPrecision = settings.rayPrecision || 4;
+        this.rayWidth = (settings.rayWidth || 0.8) * Math.PI / 180;
+        this.rayPrecision = settings.rayPrecision || 2;
         this.rayLength = settings.rayLength || 1000;
     },
 
@@ -406,6 +402,8 @@ var TriggerEntity = me.InvisibleEntity.extend({
 
         if(settings.onTrigger) this.onTrigger = new Function(settings.onTrigger);
         if(settings.onceTrigger) this.onceTrigger = new Function(settings.onceTrigger);
+        if(settings.preTrigger) this.preTrigger = new Function(settings.preTrigger);
+        if(settings.postTrigger) this.postTrigger = new Function(settings.postTrigger);
 
         this.event = settings.event;
         if(settings.target) this.target = me.game.getEntityByGUID(settings.target);
@@ -415,17 +413,28 @@ var TriggerEntity = me.InvisibleEntity.extend({
         var res = me.game.collide(this);
 
         if(res) {
-            if(this.onceTrigger && !this.locked) {
-                this.onceTrigger(res);
+            if(this.preTrigger && !this.locked) {
+                this.preTrigger(res);
                 this.locked = true;
+            }
+
+            if(this.onceTrigger) {
+                this.onceTrigger(res);
+                this.onceTrigger = null;
             }
 
             if(this.onTrigger) {
                 this.onTrigger(res);
-            } else if(this.target && typeof this.target.onTrigger === 'function') {
+            }
+
+            if(this.target && typeof this.target.onTrigger === 'function') {
                 this.target.onTrigger(this.event, res);
             }
         } else {
+            if(this.postTrigger) {
+                this.postTrigger(res);
+            }
+
             this.locked = false;
         }
 
