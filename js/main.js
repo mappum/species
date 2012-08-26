@@ -48,17 +48,38 @@ var resources = [
     type: "audio",
     src: "audio/",
     channel: 1
+}, {
+    name: "whitenoise",
+    type: "audio",
+    src: "audio/",
+    channel: 1
+}, {
+    name: "lownoise",
+    type: "audio",
+    src: "audio/",
+    channel: 1
 }
 ];
 
 //me.debug.renderHitBox = true;
 
-function setStatic(opacity) {
+var audioPlaying = false;
+function setStatic(level) {
     var staticImage = document.getElementById('static');
-    staticImage.style.opacity = opacity;
+    staticImage.style.opacity = level;
 
-    if(opacity <= 0) staticImage.style.display = 'none';
+    if(level <= 0) staticImage.style.display = 'none';
     else staticImage.style.display = 'block';
+
+    if(level > 0.3) {
+        if(!audioPlaying) {
+            me.audio.playTrack('whitenoise');
+            audioPlaying = true;
+        }
+    } else {
+        me.audio.stopTrack();
+        audioPlaying = false;
+    }
 }
  
 var game = {
