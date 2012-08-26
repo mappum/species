@@ -133,7 +133,7 @@ var PlayerEntity = me.ObjectEntity.extend({
             x: x,
             y: y,
             angle: 0,
-            width: 65,
+            width: 60,
             enabled: false
         });
         me.game.add(this.light, this.z);
@@ -215,7 +215,7 @@ var EnemyEntity = me.ObjectEntity.extend({
 
         this.attackRange = settings.attackRange || 80;
         this.lastAttack = 0;
-        this.attackCooldown = 2000;
+        this.attackCooldown = 8000;
 
         this.setVelocity(6, 12);
     },
@@ -334,7 +334,7 @@ var ShadowEntity = me.ObjectEntity.extend({
             var lighting = me.game.lighting.ctx;
 
             lighting.globalCompositeOperation = 'xor';
-            lighting.fillStyle = 'rgba(0,0,0,0.92)';
+            lighting.fillStyle = 'rgba(0,0,0,0.93)';
             lighting.fillRect(0, 0, 640, 480);
 
             ctx.drawImage(lighting.canvas, 0, 0);
