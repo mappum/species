@@ -151,8 +151,8 @@ var PlayerEntity = me.ObjectEntity.extend({
             this.aimAngle = Math.atan2(dy, dx) - Math.PI / 2;
 
             this.light.angle = this.aimAngle;
-            this.light.pos.x = this.pos.x + 4 - 18 * Math.sin(this.aimAngle);
-            this.light.pos.y = this.pos.y + 24 + 18 * Math.cos(this.aimAngle);
+            this.light.pos.x = this.pos.x + 4 - 26 * Math.sin(this.aimAngle);
+            this.light.pos.y = this.pos.y + 24 + 26 * Math.cos(this.aimAngle);
         } else {
             this.aimAngle = 0;
         }
