@@ -120,6 +120,7 @@ var game = {
         me.entityPool.add('TextEntity', TextEntity);
         me.entityPool.add('TriggerEntity', TriggerEntity);
         me.entityPool.add('DoorEntity', DoorEntity);
+        me.entityPool.add('SpawnEntity', SpawnEntity);
 
         me.input.bindKey(me.input.KEY.A, 'left');
         me.input.bindKey(me.input.KEY.D, 'right');
@@ -589,6 +590,32 @@ var DoorEntity = me.ObjectEntity.extend({
         if(!this.open) {
             this.parent(ctx);
         }
+    }
+});
+
+var SpawnEntity = me.InvisibleEntity.extend({
+    init: function(x, y, settings) {
+        this.parent(x, y, settings);
+        this.GUID = settings.GUID || this.GUID;
+
+        this.collidable = false;
+
+        if(settings.entityType) this.entityType = settings.entityType;
+    },
+
+    update: function() {
+        return true;
+    },
+
+    spawn: function() {
+        var obj = me.entityPool.newInstanceOf({
+            name: this.entityType,
+            x: this.pos.x,
+            y: this.pos.y
+        });
+
+        me.game.add(obj, this.z);
+        me.game.sort();
     }
 });
 

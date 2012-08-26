@@ -84,7 +84,6 @@
     <property name="text" value="You need to go through the door to the left, but it looks like you'll have to find a way to open it first."/>
    </properties>
   </object>
-  <object name="EnemyEntity" x="640" y="864" width="32" height="64"/>
   <object name="PlayerEntity" x="96" y="352" width="32" height="64">
    <properties>
     <property name="GUID" value="mainPlayer"/>
@@ -170,15 +169,27 @@
     <property name="target" value="door4"/>
    </properties>
   </object>
-  <object name="TextEntity" x="672" y="544" width="32" height="64">
+  <object name="TextEntity" x="736" y="544" width="32" height="64">
    <properties>
     <property name="text" value="Opening door..."/>
    </properties>
   </object>
-  <object name="TriggerEntity" x="672" y="544" width="32" height="64">
+  <object name="TriggerEntity" x="736" y="544" width="32" height="64">
    <properties>
     <property name="onceTrigger" value="this.target.open = true;"/>
     <property name="target" value="door5"/>
+   </properties>
+  </object>
+  <object name="SpawnEntity" x="1600" y="832" width="32" height="96">
+   <properties>
+    <property name="GUID" value="spawn0"/>
+    <property name="entityType" value="EnemyEntity"/>
+   </properties>
+  </object>
+  <object name="TriggerEntity" x="1184" y="864" width="32" height="64">
+   <properties>
+    <property name="onceTrigger" value="this.target.spawn()"/>
+    <property name="target" value="spawn0"/>
    </properties>
   </object>
  </objectgroup>
